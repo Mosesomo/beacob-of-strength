@@ -6,7 +6,7 @@ export default function AboutSection() {
   const isInView = useInView(ref, { once: true, amount: 0.3 })
 
   return (
-    <section className="py-10 w-full text-white" ref={ref}>
+    <section className="py-4 w-full text-white" ref={ref}>
       <div className="px-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

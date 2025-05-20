@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from "react"
-import { motion, useInView } from "framer-motion"
-import { Link } from 'react-router-dom'
+import { motion, useInView, AnimatePresence } from "framer-motion"
 import { Button } from "../components/ui/Button"
 import { Tabs, TabsList, TabsTrigger } from "../components/ui/Tabs"
 import {
@@ -17,40 +16,59 @@ import {
   ArrowRight,
   ChevronDown,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  ArrowUpRight,
 } from "lucide-react"
 
 export default function ServicesPage() {
   const ref = useRef(null)
   const isInView = useInView(ref, { once: true, amount: 0.1 })
   const [activeTab, setActiveTab] = useState("mental-health")
-  const [currentSlide, setCurrentSlide] = useState(0)
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const [direction, setDirection] = useState(1)
+  const [touchStart, setTouchStart] = useState(0)
+  const [touchEnd, setTouchEnd] = useState(0)
   const [isMobile, setIsMobile] = useState(false)
 
-  // Check screen size
+  // Check if mobile on mount and window resize
   useEffect(() => {
-    const checkScreenSize = () => {
+    const checkMobile = () => {
       setIsMobile(window.innerWidth < 768)
     }
     
-    checkScreenSize()
-    window.addEventListener('resize', checkScreenSize)
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
     
-    return () => {
-      window.removeEventListener('resize', checkScreenSize)
-    }
+    return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
-  // This ensures animations trigger when component mounts
-  useEffect(() => {
-    // Force a small delay to ensure the useInView hook detects the element
-    const timer = setTimeout(() => {
-      window.scrollTo(window.scrollX, window.scrollY + 1);
-      setTimeout(() => window.scrollTo(window.scrollX, window.scrollY - 1), 50);
-    }, 100);
-    
-    return () => clearTimeout(timer);
-  }, []);
+  // Enhanced slide variants for mobile carousel
+  const slideVariants = {
+    enter: (direction) => ({
+      x: direction > 0 ? 300 : -300,
+      opacity: 0,
+      scale: 0.9,
+    }),
+    center: {
+      x: 0,
+      opacity: 1,
+      scale: 1,
+      transition: { 
+        x: { type: "spring", stiffness: 300, damping: 30 },
+        opacity: { duration: 0.4 },
+        scale: { duration: 0.4 }
+      },
+    },
+    exit: (direction) => ({
+      x: direction < 0 ? 300 : -300,
+      opacity: 0,
+      scale: 0.9,
+      transition: { 
+        x: { type: "spring", stiffness: 300, damping: 30 },
+        opacity: { duration: 0.3 }
+      },
+    }),
+  }
 
   const mentalHealthServices = [
     {
@@ -88,18 +106,6 @@ export default function ServicesPage() {
       description:
         "Working to reduce the stigma around mental health issues through education, awareness, and advocacy, making it easier for women to seek help without fear of discrimination.",
       icon: <Users className="h-6 w-6 text-pink-600" />,
-    },
-    {
-      title: "Building Stronger Communities",
-      description:
-        "Strong mental health support contributes to healthier families and communities, creating a ripple effect that extends beyond the individual to positively impact society.",
-      icon: <Briefcase className="h-6 w-6 text-pink-600" />,
-    },
-    {
-      title: "Advancing Gender Equity",
-      description:
-        "By addressing the unique mental health challenges faced by women and girls, we contribute to greater gender equity in healthcare access and outcomes.",
-      icon: <Scale className="h-6 w-6 text-pink-600" />,
     },
   ]
 
@@ -140,116 +146,152 @@ export default function ServicesPage() {
         "Our comprehensive approach addresses the interconnected challenges of housing instability, poverty, and abuse, helping women break free from cycles of disadvantage.",
       icon: <Lightbulb className="h-6 w-6 text-white" />,
     },
-    {
-      title: "Preventing Homelessness",
-      description:
-        "For women at risk of homelessness, our early intervention services provide critical support to maintain housing stability and prevent crisis situations.",
-      icon: <Home className="h-6 w-6 text-white" />,
-    },
-    {
-      title: "Promoting Educational Opportunities",
-      description:
-        "Access to educational resources, GED programs, vocational training, and higher education support helps women build skills for sustainable careers.",
-      icon: <GraduationCap className="h-6 w-6 text-white" />,
-    },
-    {
-      title: "Building Community And Connection",
-      description:
-        "Our shelter programs foster a sense of community and belonging, reducing isolation and creating networks of support that extend beyond the shelter stay.",
-      icon: <Users className="h-6 w-6 text-white" />,
-    },
-    {
-      title: "Advocating For Social Justice",
-      description:
-        "We engage in advocacy to address systemic barriers and promote policies that support women's rights, affordable housing, and economic justice.",
-      icon: <Scale className="h-6 w-6 text-white" />,
-    },
   ]
 
-  // Function to handle slide navigation
-  const nextSlide = (services) => {
-    if (activeTab === "mental-health") {
-      setCurrentSlide(prev => (prev === mentalHealthServices.length - (isMobile ? 1 : 3) ? 0 : prev + 1));
-    } else {
-      setCurrentSlide(prev => (prev === shelterServices.length - (isMobile ? 1 : 3) ? 0 : prev + 1));
-    }
-  };
+  // Animation variants
+  const fadeIn = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
+  }
 
-  const prevSlide = (services) => {
-    if (activeTab === "mental-health") {
-      setCurrentSlide(prev => (prev === 0 ? mentalHealthServices.length - (isMobile ? 1 : 3) : prev - 1));
-    } else {
-      setCurrentSlide(prev => (prev === 0 ? shelterServices.length - (isMobile ? 1 : 3) : prev - 1));
-    }
-  };
+  const staggerContainer = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+      },
+    },
+  }
 
-  // Auto-advance slides with smooth transitions
-  useEffect(() => {
-    // Reset current slide when changing tabs
-    setCurrentSlide(0);
-    
-    const timer = setTimeout(() => {
-      nextSlide();
-    }, 5000);
-    
-    return () => clearTimeout(timer);
-  }, [currentSlide, activeTab]);
+  const itemVariant = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
+  }
 
-  // For desktop view, we show 3 cards at once
-  const visibleCards = isMobile ? 1 : 3;
-  const getCurrentServices = () => activeTab === "mental-health" ? mentalHealthServices : shelterServices;
+  const textVariants = {
+    hidden: { opacity: 0, y: 30 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: {
+        staggerChildren: 0.2,
+        delayChildren: 0.3,
+        duration: 0.8
+      }
+    },
+  }
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 }
+  }
+
+  // Handle navigation
+  const handlePrev = () => {
+    setDirection(-1)
+    const services = activeTab === "mental-health" ? mentalHealthServices : shelterServices
+    setCurrentIndex((prev) => 
+      prev === 0 ? services.length - 1 : prev - 1
+    )
+  }
+
+  const handleNext = () => {
+    setDirection(1)
+    const services = activeTab === "mental-health" ? mentalHealthServices : shelterServices
+    setCurrentIndex((prev) => 
+      prev === services.length - 1 ? 0 : prev + 1
+    )
+  }
+
+  // Handle touch events for swipe functionality
+  const handleTouchStart = (e) => {
+    setTouchStart(e.targetTouches[0].clientX)
+  }
   
+  const handleTouchMove = (e) => {
+    setTouchEnd(e.targetTouches[0].clientX)
+  }
+  
+  const handleTouchEnd = () => {
+    if (touchStart - touchEnd > 50) {
+      // Swipe left
+      handleNext()
+    }
+    
+    if (touchStart - touchEnd < -50) {
+      // Swipe right
+      handlePrev()
+    }
+  }
+
+  // Reset index when tab changes
+  useEffect(() => {
+    setCurrentIndex(0)
+  }, [activeTab])
+
   return (
     <div className="" ref={ref}>
       {/* Hero Section with Background Image */}
       <div className="relative w-full min-h-[70vh] flex items-center overflow-hidden">
         {/* Background Image with Overlay */}
-        <div 
-          className="absolute inset-0 z-0"  
-          style={{ 
+        <div
+          className="absolute inset-0 z-0"
+          style={{
             backgroundImage: "url('https://i.pinimg.com/736x/37/cf/1e/37cf1e0eeff2e9ed56861d49f6195f64.jpg')",
             backgroundPosition: "center",
           }}
         >
           {/* Dark overlay for better text readability */}
-           <div className="absolute inset-0 bg-gradient-to-r from-purple-900/80 via-pink-800/70 to-orange-700/60 mix-blend-multiply" />
+          <div className="absolute inset-0 bg-gradient-to-r from-purple-900/80 via-pink-800/70 to-orange-700/60 mix-blend-multiply" />
         </div>
-        
+
         {/* Content */}
         <div className="container mx-auto px-4 relative z-20">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
+            initial="hidden"
+            animate="visible"
+            variants={textVariants}
             className="text-center text-white max-w-3xl mx-auto"
           >
-            <h1 className="text-4xl md:text-5xl font-bold mb-4 font-display">Our Services</h1>
-            <p className="text-xl max-w-3xl mx-auto font-body mb-8">
+            <motion.h1 
+              variants={itemVariants}
+              className="text-4xl md:text-5xl font-bold mb-4 font-display"
+            >
+              Our Services
+            </motion.h1>
+            <motion.p 
+              variants={itemVariants}
+              className="text-xl max-w-3xl mx-auto font-body mb-8"
+            >
               Comprehensive support for vulnerable women and girls through mental health services and safe shelter.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button 
+            </motion.p>
+            <motion.div 
+              variants={itemVariants}
+              className="flex flex-col sm:flex-row gap-4 justify-center"
+            >
+              <Button
                 className="bg-pink-600 hover:bg-pink-700 font-display flex items-center gap-2"
-                onClick={() => window.location.href = '/contact-us'}
+                onClick={() => (window.location.href = "/contact-us")}
               >
                 Request Services
                 <ArrowRight className="h-4 w-4" />
               </Button>
               <a href="#learn">
                 <Button variant="outline" className="border-white text-white hover:bg-white/10 font-display">
-                    Learn More
-                    <ChevronDown className="h-4 w-4 ml-2" />
+                  Learn More
+                  <ChevronDown className="h-4 w-4 ml-2" />
                 </Button>
               </a>
-            </div>
+            </motion.div>
           </motion.div>
         </div>
 
         {/* Scroll indicator */}
-        <motion.div 
+        <motion.div
           className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-20"
           animate={{ y: [0, 10, 0] }}
-          transition={{ duration: 1.5, repeat: Infinity }}
+          transition={{ duration: 1.5, repeat: Number.POSITIVE_INFINITY }}
         >
           <ChevronDown className="h-8 w-8 text-white/80" />
         </motion.div>
@@ -299,7 +341,7 @@ export default function ServicesPage() {
                   </p>
                   <Button
                     className="text-sky-600 hover:bg-gray-100 font-display flex items-center gap-2"
-                    onClick={() => window.location.href = '/contact-us'}
+                    onClick={() => (window.location.href = "/contact-us")}
                   >
                     Request Services
                     <ArrowRight className="h-4 w-4" />
@@ -320,78 +362,101 @@ export default function ServicesPage() {
                 </motion.div>
               </div>
 
-              {/* Slideshow for services */}
-              <div className="relative">
-                <div className="overflow-hidden">
-                  {/* On desktop, show 3 cards in a grid that slides */}
+              {/* Services Grid/Carousel */}
+              {!isMobile ? (
+                <motion.div
+                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                  variants={staggerContainer}
+                  initial="hidden"
+                  animate="visible"
+                >
+                  {mentalHealthServices.map((service, index) => (
+                    <motion.div
+                      key={index}
+                      variants={itemVariant}
+                      className="bg-white rounded-lg shadow-md p-6 h-full transform transition-all duration-300 hover:-translate-y-2 hover:shadow-xl"
+                    >
+                      <div className="flex items-start mb-4">
+                        <div className="mr-4 mt-1">{service.icon}</div>
+                        <h3 className="text-xl font-bold text-sky-600 font-display">{service.title}</h3>
+                      </div>
+                      <p className="text-gray-700 font-body">{service.description}</p>
+                    </motion.div>
+                  ))}
+                </motion.div>
+              ) : (
+                <motion.div 
+                  className="relative md:hidden"
+                  initial="hidden"
+                  animate="visible"
+                  variants={fadeIn}
+                >
                   <div 
-                    className={`flex transition-transform duration-500 ease-in-out ${isMobile ? '' : 'gap-6'}`}
-                    style={{ transform: `translateX(-${(currentSlide * 100) / visibleCards}%)` }}
+                    className="overflow-hidden touch-pan-y"
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
                   >
-                    {mentalHealthServices.map((service, index) => (
-                      <div 
-                        key={index} 
-                        className={`${isMobile ? 'w-full' : 'w-1/3'} flex-shrink-0 bg-white rounded-lg shadow-md p-6`}
+                    <AnimatePresence initial={false} custom={direction} mode="sync">
+                      <motion.div
+                        key={currentIndex}
+                        custom={direction}
+                        variants={slideVariants}
+                        initial="enter"
+                        animate="center"
+                        exit="exit"
+                        className="bg-white rounded-lg shadow-md p-6 mx-4"
                       >
                         <div className="flex items-start mb-4">
-                          <div className="mr-4 mt-1">{service.icon}</div>
-                          <h3 className="text-xl font-bold text-sky-600 font-display">{service.title}</h3>
+                          <div className="mr-4 mt-1">{mentalHealthServices[currentIndex].icon}</div>
+                          <h3 className="text-xl font-bold text-sky-600 font-display">
+                            {mentalHealthServices[currentIndex].title}
+                          </h3>
                         </div>
-                        <p className="text-gray-700 font-body">{service.description}</p>
-                      </div>
-                    ))}
+                        <p className="text-gray-700 font-body">
+                          {mentalHealthServices[currentIndex].description}
+                        </p>
+                      </motion.div>
+                    </AnimatePresence>
                   </div>
 
-                  {/* Navigation buttons */}
-                  <div className="absolute inset-y-0 left-0 flex items-center">
+                  {/* Navigation Controls */}
+                  <div className="flex justify-between mt-6 px-4">
                     <button 
-                      onClick={() => prevSlide(mentalHealthServices)}
-                      className="bg-white/80 rounded-full p-2 ml-2 shadow-md hover:bg-white z-10"
-                      aria-label="Previous slide"
+                      onClick={handlePrev}
+                      className="bg-white/80 hover:bg-white rounded-full p-2 shadow-md"
+                      aria-label="Previous service"
                     >
                       <ChevronLeft className="h-6 w-6 text-pink-600" />
                     </button>
-                  </div>
-                  <div className="absolute inset-y-0 right-0 flex items-center">
+                    
+                    {/* Indicator Dots */}
+                    <div className="flex items-center space-x-2">
+                      {mentalHealthServices.map((_, index) => (
+                        <button
+                          key={index}
+                          onClick={() => {
+                            setDirection(index > currentIndex ? 1 : -1)
+                            setCurrentIndex(index)
+                          }}
+                          className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
+                            currentIndex === index ? "bg-pink-600 scale-125" : "bg-gray-300"
+                          }`}
+                          aria-label={`Go to service ${index + 1}`}
+                        />
+                      ))}
+                    </div>
+                    
                     <button 
-                      onClick={() => nextSlide(mentalHealthServices)}
-                      className="bg-white/80 rounded-full p-2 mr-2 shadow-md hover:bg-white z-10"
-                      aria-label="Next slide"
+                      onClick={handleNext}
+                      className="bg-white/80 hover:bg-white rounded-full p-2 shadow-md"
+                      aria-label="Next service"
                     >
                       <ChevronRight className="h-6 w-6 text-pink-600" />
                     </button>
                   </div>
-                </div>
-
-                {/* Slide indicators */}
-                <div className="flex justify-center mt-6 space-x-2">
-                  {isMobile ? (
-                    // Mobile: individual dots for each slide
-                    mentalHealthServices.map((_, index) => (
-                      <button
-                        key={index}
-                        onClick={() => setCurrentSlide(index)}
-                        className={`h-2 w-2 rounded-full ${
-                          currentSlide === index ? "bg-pink-600" : "bg-gray-300"
-                        }`}
-                        aria-label={`Go to slide ${index + 1}`}
-                      />
-                    ))
-                  ) : (
-                    // Desktop: dots for possible positions
-                    Array.from({ length: mentalHealthServices.length - visibleCards + 1 }).map((_, index) => (
-                      <button
-                        key={index}
-                        onClick={() => setCurrentSlide(index)}
-                        className={`h-2 w-2 rounded-full ${
-                          currentSlide === index ? "bg-pink-600" : "bg-gray-300"
-                        }`}
-                        aria-label={`Go to slide ${index + 1}`}
-                      />
-                    ))
-                  )}
-                </div>
-              </div>
+                </motion.div>
+              )}
             </div>
           </section>
         </div>
@@ -428,7 +493,7 @@ export default function ServicesPage() {
                   </p>
                   <Button
                     className=" text-pink-600 hover:bg-gray-100 font-display flex items-center gap-2"
-                    onClick={() => window.location.href = '/contact-us'}
+                    onClick={() => (window.location.href = "/contact-us")}
                   >
                     Request Shelter
                     <ArrowRight className="h-4 w-4" />
@@ -436,78 +501,101 @@ export default function ServicesPage() {
                 </motion.div>
               </div>
 
-              {/* Slideshow for services */}
-              <div className="relative">
-                <div className="overflow-hidden">
-                  {/* On desktop, show 3 cards in a grid that slides */}
+              {/* Services Grid/Carousel */}
+              {!isMobile ? (
+                <motion.div
+                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                  variants={staggerContainer}
+                  initial="hidden"
+                  animate="visible"
+                >
+                  {shelterServices.map((service, index) => (
+                    <motion.div
+                      key={index}
+                      variants={itemVariant}
+                      className="bg-pink-700 rounded-lg shadow-md p-6 text-white h-full transform transition-all duration-300 hover:-translate-y-2 hover:shadow-xl"
+                    >
+                      <div className="flex items-start mb-4">
+                        <div className="mr-4 mt-1">{service.icon}</div>
+                        <h3 className="text-xl font-bold font-display">{service.title}</h3>
+                      </div>
+                      <p className="text-white/90 font-body">{service.description}</p>
+                    </motion.div>
+                  ))}
+                </motion.div>
+              ) : (
+                <motion.div 
+                  className="relative md:hidden"
+                  initial="hidden"
+                  animate="visible"
+                  variants={fadeIn}
+                >
                   <div 
-                    className={`flex transition-transform duration-500 ease-in-out ${isMobile ? '' : 'gap-6'}`}
-                    style={{ transform: `translateX(-${(currentSlide * 100) / visibleCards}%)` }}
+                    className="overflow-hidden touch-pan-y"
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
                   >
-                    {shelterServices.map((service, index) => (
-                      <div 
-                        key={index} 
-                        className={`${isMobile ? 'w-full' : 'w-1/3'} flex-shrink-0 bg-pink-700 rounded-lg shadow-md p-6 text-white`}
+                    <AnimatePresence initial={false} custom={direction} mode="sync">
+                      <motion.div
+                        key={currentIndex}
+                        custom={direction}
+                        variants={slideVariants}
+                        initial="enter"
+                        animate="center"
+                        exit="exit"
+                        className="bg-pink-700 rounded-lg shadow-md p-6 text-white mx-4"
                       >
                         <div className="flex items-start mb-4">
-                          <div className="mr-4 mt-1">{service.icon}</div>
-                          <h3 className="text-xl font-bold font-display">{service.title}</h3>
+                          <div className="mr-4 mt-1">{shelterServices[currentIndex].icon}</div>
+                          <h3 className="text-xl font-bold font-display">
+                            {shelterServices[currentIndex].title}
+                          </h3>
                         </div>
-                        <p className="text-white/90 font-body">{service.description}</p>
-                      </div>
-                    ))}
+                        <p className="text-white/90 font-body">
+                          {shelterServices[currentIndex].description}
+                        </p>
+                      </motion.div>
+                    </AnimatePresence>
                   </div>
 
-                  {/* Navigation buttons */}
-                  <div className="absolute inset-y-0 left-0 flex items-center">
+                  {/* Navigation Controls */}
+                  <div className="flex justify-between mt-6 px-4">
                     <button 
-                      onClick={() => prevSlide(shelterServices)}
-                      className="bg-white/80 rounded-full p-2 ml-2 shadow-md hover:bg-white z-10"
-                      aria-label="Previous slide"
+                      onClick={handlePrev}
+                      className="bg-white/80 hover:bg-white rounded-full p-2 shadow-md"
+                      aria-label="Previous service"
                     >
                       <ChevronLeft className="h-6 w-6 text-pink-600" />
                     </button>
-                  </div>
-                  <div className="absolute inset-y-0 right-0 flex items-center">
+                    
+                    {/* Indicator Dots */}
+                    <div className="flex items-center space-x-2">
+                      {shelterServices.map((_, index) => (
+                        <button
+                          key={index}
+                          onClick={() => {
+                            setDirection(index > currentIndex ? 1 : -1)
+                            setCurrentIndex(index)
+                          }}
+                          className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
+                            currentIndex === index ? "bg-white scale-125" : "bg-white/40"
+                          }`}
+                          aria-label={`Go to service ${index + 1}`}
+                        />
+                      ))}
+                    </div>
+                    
                     <button 
-                      onClick={() => nextSlide(shelterServices)}
-                      className="bg-white/80 rounded-full p-2 mr-2 shadow-md hover:bg-white z-10"
-                      aria-label="Next slide"
+                      onClick={handleNext}
+                      className="bg-white/80 hover:bg-white rounded-full p-2 shadow-md"
+                      aria-label="Next service"
                     >
                       <ChevronRight className="h-6 w-6 text-pink-600" />
                     </button>
                   </div>
-                </div>
-
-                {/* Slide indicators */}
-                <div className="flex justify-center mt-6 space-x-2">
-                  {isMobile ? (
-                    // Mobile: individual dots for each slide
-                    shelterServices.map((_, index) => (
-                      <button
-                        key={index}
-                        onClick={() => setCurrentSlide(index)}
-                        className={`h-2 w-2 rounded-full ${
-                          currentSlide === index ? "bg-white" : "bg-white/40"
-                        }`}
-                        aria-label={`Go to slide ${index + 1}`}
-                      />
-                    ))
-                  ) : (
-                    // Desktop: dots for possible positions
-                    Array.from({ length: shelterServices.length - visibleCards + 1 }).map((_, index) => (
-                      <button
-                        key={index}
-                        onClick={() => setCurrentSlide(index)}
-                        className={`h-2 w-2 rounded-full ${
-                          currentSlide === index ? "bg-white" : "bg-white/40"
-                        }`}
-                        aria-label={`Go to slide ${index + 1}`}
-                      />
-                    ))
-                  )}
-                </div>
-              </div>
+                </motion.div>
+              )}
             </div>
           </section>
         </div>
@@ -516,31 +604,42 @@ export default function ServicesPage() {
       {/* Contact Section */}
       <section className="py-16 bg-gray-100">
         <div className="container mx-auto px-4 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
+          <motion.div 
+            initial="hidden"
+            animate="visible"
+            variants={textVariants}
           >
-            <h2 className="text-3xl font-bold mb-6 font-display">Need Assistance?</h2>
-            <p className="text-lg text-gray-700 max-w-2xl mx-auto mb-8 font-body">
+            <motion.h2 
+              variants={itemVariants}
+              className="text-3xl font-bold mb-6 font-display"
+            >
+              Need Assistance?
+            </motion.h2>
+            <motion.p 
+              variants={itemVariants}
+              className="text-lg text-gray-700 max-w-2xl mx-auto mb-8 font-body"
+            >
               Our team is available 24/7 to provide support and connect you with the services you need. All inquiries
               are confidential.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            </motion.p>
+            <motion.div 
+              variants={itemVariants}
+              className="flex flex-col sm:flex-row gap-4 justify-center"
+            >
               <Button
                 className="bg-pink-600 hover:bg-pink-700 font-display"
-                onClick={() => window.location.href = '/contact-us'}
+                onClick={() => (window.location.href = "/contact-us")}
               >
                 Contact Us Now
               </Button>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="border-pink-600 text-pink-600 hover:bg-pink-50 font-display"
-                onClick={() => window.location.href = 'tel:+15551234567'}
+                onClick={() => (window.location.href = "tel:+15551234567")}
               >
                 Call Helpline: (555) 123-4567
               </Button>
-            </div>
+            </motion.div>
           </motion.div>
         </div>
       </section>

@@ -1,29 +1,60 @@
 import { useRef, useState, useEffect } from "react"
-import { Button } from "../components/ui/Button"
-import { motion, useInView } from "framer-motion"
+import { motion, useInView, AnimatePresence } from "framer-motion"
 import { Heart, Shield, Briefcase, Users, Scale, Lightbulb, ChevronLeft, ChevronRight } from "lucide-react"
 
 export default function WhyChooseUsSection() {
   const ref = useRef(null)
   const isInView = useInView(ref, { once: true, amount: 0.2 })
-  const [currentSlide, setCurrentSlide] = useState(0)
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const [direction, setDirection] = useState(1)
   const [isMobile, setIsMobile] = useState(false)
+  const [touchStart, setTouchStart] = useState(0)
+  const [touchEnd, setTouchEnd] = useState(0)
 
- // Check screen size
+  // Check if mobile on mount and window resize
   useEffect(() => {
-    const checkScreenSize = () => {
+    const checkMobile = () => {
       setIsMobile(window.innerWidth < 768)
     }
     
-    checkScreenSize()
-    window.addEventListener('resize', checkScreenSize)
+    // Initial check
+    checkMobile()
     
-    return () => {
-      window.removeEventListener('resize', checkScreenSize)
-    }
+    // Add event listener
+    window.addEventListener('resize', checkMobile)
+    
+    // Cleanup
+    return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
-  
+  // Enhanced slide variants for mobile carousel
+  const slideVariants = {
+    enter: (direction) => ({
+      x: direction > 0 ? 300 : -300,
+      opacity: 0,
+      scale: 0.9,
+    }),
+    center: {
+      x: 0,
+      opacity: 1,
+      scale: 1,
+      transition: { 
+        x: { type: "spring", stiffness: 300, damping: 30 },
+        opacity: { duration: 0.4 },
+        scale: { duration: 0.4 }
+      },
+    },
+    exit: (direction) => ({
+      x: direction < 0 ? 300 : -300,
+      opacity: 0,
+      scale: 0.9,
+      transition: { 
+        x: { type: "spring", stiffness: 300, damping: 30 },
+        opacity: { duration: 0.3 }
+      },
+    }),
+  }
+
   const reasons = [
     {
       title: "Empowerment",
@@ -68,32 +99,55 @@ export default function WhyChooseUsSection() {
       image: "https://i.pinimg.com/736x/11/d1/ba/11d1ba1d63ad0279f19cb85c6a7b34cb.jpg",
     },
   ]
+
+  // Handle navigation
+  const handlePrev = () => {
+    setDirection(-1)
+    setCurrentIndex((prev) => 
+      prev === 0 ? reasons.length - 1 : prev - 1
+    )
+  }
+
+  const handleNext = () => {
+    setDirection(1)
+    setCurrentIndex((prev) => 
+      prev === reasons.length - 1 ? 0 : prev + 1
+    )
+  }
+
+  // Handle touch events for swipe functionality
+  const handleTouchStart = (e) => {
+    setTouchStart(e.targetTouches[0].clientX)
+  }
   
-   const nextSlide = () => {
-    setCurrentSlide((prev) => (prev === reasons.length - 1 ? 0 : prev + 1))
+  const handleTouchMove = (e) => {
+    setTouchEnd(e.targetTouches[0].clientX)
   }
-
-  const prevSlide = () => {
-    setCurrentSlide((prev) => (prev === 0 ? reasons.length - 1 : prev - 1))
-  }
-
-  // Auto-advance slides with smooth transitions
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      nextSlide()
-    }, 5000)
+  
+  const handleTouchEnd = () => {
+    if (touchStart - touchEnd > 50) {
+      // Swipe left
+      handleNext()
+    }
     
-    return () => clearTimeout(timer)
-  }, [currentSlide])
+    if (touchStart - touchEnd < -50) {
+      // Swipe right
+      handlePrev()
+    }
+  }
 
-  // For desktop view, we show 3 cards at once
-  const visibleCards = isMobile ? 1 : 3
-  const startIndex = isMobile ? currentSlide : (currentSlide % (reasons.length - visibleCards + 1))
-
+  // Auto-advance slides
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setDirection(1)
+      setCurrentIndex((prev) => (prev + 1) % reasons.length)
+    }, 5000)
+    return () => clearInterval(timer)
+  }, [reasons.length])
 
   return (
     <section className="py-20" ref={ref}>
-      <div className="container mx-auto px-4">
+      <div className="container mx-auto px-4 md:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
@@ -110,87 +164,135 @@ export default function WhyChooseUsSection() {
           </p>
         </motion.div>
 
-        {/* Slideshow for all screen sizes */}
-        <div className="relative">
-          <div className="overflow-hidden">
-            {/* On desktop, show 3 cards in a grid that slides */}
+        {/* Desktop View - Grid Layout */}
+        {!isMobile && (
+          <motion.div
+            className="hidden md:grid md:grid-cols-3 gap-8"
+            initial="hidden"
+            animate={isInView ? "visible" : "hidden"}
+            variants={{
+              hidden: { opacity: 0 },
+              visible: {
+                opacity: 1,
+                transition: {
+                  staggerChildren: 0.1,
+                  delayChildren: 0.2
+                }
+              }
+            }}
+          >
+            {reasons.map((reason, index) => (
+              <motion.div
+                key={index}
+                variants={{
+                  hidden: { opacity: 0, y: 20 },
+                  visible: { opacity: 1, y: 0 }
+                }}
+                className="bg-white rounded-lg shadow-md overflow-hidden transform transition-all duration-300 hover:-translate-y-2 hover:shadow-lg"
+              >
+                <div className="h-48 overflow-hidden">
+                  <img
+                    src={reason.image}
+                    alt={reason.title}
+                    className="w-full h-full object-cover transition-transform duration-700 hover:scale-110"
+                  />
+                </div>
+                <div className="p-6">
+                  <div className="flex items-center mb-4">
+                    <div className="mr-3">{reason.icon}</div>
+                    <h3 className="text-xl font-bold text-pink-600 font-display">{reason.title}</h3>
+                  </div>
+                  <p className="text-gray-700 font-body">{reason.description}</p>
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
+
+        {/* Mobile View - Carousel */}
+        {isMobile && (
+          <motion.div 
+            className="relative md:hidden"
+            initial="hidden"
+            animate={isInView ? "visible" : "hidden"}
+            variants={{
+              hidden: { opacity: 0 },
+              visible: { opacity: 1 }
+            }}
+          >
             <div 
-              className={`flex transition-transform duration-500 ease-in-out ${isMobile ? '' : 'gap-8'}`}
-              style={{ transform: `translateX(-${(startIndex * 100) / visibleCards}%)` }}
+              className="overflow-hidden touch-pan-y px-4"
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
             >
-              {reasons.map((reason, index) => (
-                <div 
-                  key={index} 
-                  className={`${isMobile ? 'w-full' : 'w-1/3'} flex-shrink-0 bg-white rounded-lg shadow-md overflow-hidden`}
+              <AnimatePresence initial={false} custom={direction} mode="sync">
+                <motion.div
+                  key={currentIndex}
+                  custom={direction}
+                  variants={slideVariants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  className="bg-white rounded-lg shadow-md overflow-hidden mx-auto max-w-sm"
                 >
                   <div className="h-48 overflow-hidden">
                     <img
-                      src={reason.image || "/api/placeholder/400/320"}
-                      alt={reason.title}
+                      src={reasons[currentIndex].image}
+                      alt={reasons[currentIndex].title}
                       className="w-full h-full object-cover"
                     />
                   </div>
                   <div className="p-6">
                     <div className="flex items-center mb-4">
-                      <div className="mr-3">{reason.icon}</div>
-                      <h3 className="text-xl font-bold text-pink-600 font-display">{reason.title}</h3>
+                      <div className="mr-3">{reasons[currentIndex].icon}</div>
+                      <h3 className="text-xl font-bold text-pink-600 font-display">{reasons[currentIndex].title}</h3>
                     </div>
-                    <p className="text-gray-700 font-body">{reason.description}</p>
+                    <p className="text-gray-700 font-body">{reasons[currentIndex].description}</p>
                   </div>
-                </div>
-              ))}
+                </motion.div>
+              </AnimatePresence>
             </div>
 
-            {/* Navigation buttons */}
-            <div className="absolute inset-y-0 left-0 flex items-center">
+            {/* Navigation Controls */}
+            <div className="flex justify-between mt-8 px-4">
               <button 
-                onClick={prevSlide}
-                className="bg-white/80 rounded-full p-2 ml-2 shadow-md hover:bg-white z-10"
-                aria-label="Previous slide"
+                onClick={handlePrev}
+                className="bg-white/80 hover:bg-white rounded-full p-2 shadow-md"
+                aria-label="Previous reason"
               >
                 <ChevronLeft className="h-6 w-6 text-pink-600" />
               </button>
-            </div>
-            <div className="absolute inset-y-0 right-0 flex items-center">
+              
+              {/* Indicator Dots */}
+              <div className="flex items-center space-x-2">
+                {reasons.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => {
+                      setDirection(index > currentIndex ? 1 : -1)
+                      setCurrentIndex(index)
+                    }}
+                    className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
+                      currentIndex === index 
+                        ? "bg-pink-600 scale-125" 
+                        : "bg-gray-300"
+                    }`}
+                    aria-label={`Go to reason ${index + 1}`}
+                  />
+                ))}
+              </div>
+              
               <button 
-                onClick={nextSlide}
-                className="bg-white/80 rounded-full p-2 mr-2 shadow-md hover:bg-white z-10"
-                aria-label="Next slide"
+                onClick={handleNext}
+                className="bg-white/80 hover:bg-white rounded-full p-2 shadow-md"
+                aria-label="Next reason"
               >
                 <ChevronRight className="h-6 w-6 text-pink-600" />
               </button>
             </div>
-          </div>
-
-          {/* Slide indicators */}
-          <div className="flex justify-center mt-6 space-x-2">
-            {isMobile ? (
-              // Mobile: 6 dots for 6 individual slides
-              reasons.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => setCurrentSlide(index)}
-                  className={`h-2 w-2 rounded-full ${
-                    currentSlide === index ? "bg-pink-600" : "bg-gray-300"
-                  }`}
-                  aria-label={`Go to slide ${index + 1}`}
-                />
-              ))
-            ) : (
-              // Desktop: 4 dots for 4 possible positions (0,1,2,3)
-              Array.from({ length: reasons.length - visibleCards + 1 }).map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => setCurrentSlide(index)}
-                  className={`h-2 w-2 rounded-full ${
-                    startIndex === index ? "bg-pink-600" : "bg-gray-300"
-                  }`}
-                  aria-label={`Go to slide ${index + 1}`}
-                />
-              ))
-            )}
-          </div>
-        </div>
+          </motion.div>
+        )}
       </div>
     </section>
   )

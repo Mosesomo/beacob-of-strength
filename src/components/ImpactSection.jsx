@@ -44,42 +44,56 @@ const Counter = ({ end, duration = 2000, suffix = "" }) => {
 };
 
 // Animated progress bar component
-const AnimatedProgress = ({ value, duration = 1500 }) => {
-  const [currentValue, setCurrentValue] = useState(0)
-  const [isAnimating, setIsAnimating] = useState(false)
+const AnimatedProgress = ({ value, duration = 2000 }) => {
+  const [currentValue, setCurrentValue] = useState(0);
+  const [isAnimating, setIsAnimating] = useState(false);
   
+  // Custom easing function for smoother progress
+  const easeOutQuint = (t) => {
+    return 1 - Math.pow(1 - t, 5);
+  };
+
   useEffect(() => {
     if (!isAnimating) return;
     
     let startTime = null;
     let animationFrame;
     
-    const step = (timestamp) => {
+    const animate = (timestamp) => {
       if (!startTime) startTime = timestamp;
-      const progress = Math.min((timestamp - startTime) / duration, 1);
+      const elapsed = timestamp - startTime;
+      const progress = Math.min(elapsed / duration, 1);
       
-      setCurrentValue(Math.floor(progress * value));
+      // Apply easing function to the progress
+      const easedProgress = easeOutQuint(progress);
+      
+      setCurrentValue(Math.floor(easedProgress * value));
       
       if (progress < 1) {
-        animationFrame = requestAnimationFrame(step);
+        animationFrame = requestAnimationFrame(animate);
       }
     };
     
-    animationFrame = requestAnimationFrame(step);
+    animationFrame = requestAnimationFrame(animate);
     
     return () => cancelAnimationFrame(animationFrame);
   }, [value, duration, isAnimating]);
   
   useEffect(() => {
-    // Start animation when component mounts
     setIsAnimating(true);
+    return () => setIsAnimating(false);
   }, []);
-  
-  return (
-    <div className="relative h-2 w-full overflow-hidden rounded-full bg-gray-200">
-      <div
-        className="h-full bg-pink-600 transition-all duration-300 ease-out"
-        style={{ width: `${currentValue}%` }}
+
+   return (
+    <div className="relative h-3 w-full overflow-hidden rounded-full bg-gray-200">
+      <motion.div
+        className="h-full bg-gradient-to-r from-pink-500 to-pink-600"
+        initial={{ width: 0 }}
+        animate={{ width: `${currentValue}%` }}
+        transition={{
+          duration: duration / 1000, // Convert to seconds
+          ease: [0.16, 1, 0.3, 1] // Custom cubic-bezier curve for smooth motion
+        }}
       />
     </div>
   );
@@ -118,24 +132,6 @@ export default function ImpactSection() {
             Through dedication and community support, we've made a meaningful difference in thousands of lives.
           </p>
         </motion.div>
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-16">
-          {stats.map((stat, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 20 }}
-              animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-              transition={{ duration: 0.6, delay: index * 0.1 }}
-              className="bg-gray-50 rounded-lg p-6 text-center shadow-sm"
-            >
-              <div className="flex justify-center mb-2">{stat.icon}</div>
-              <div className="text-3xl font-bold text-pink-600 mb-1 font-display">
-                {isInView && <Counter end={stat.value} suffix={stat.suffix} />}
-              </div>
-              <div className="text-gray-600 font-body">{stat.label}</div>
-            </motion.div>
-          ))}
-        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <motion.div

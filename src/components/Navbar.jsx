@@ -83,10 +83,12 @@ export default function Navbar() {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.3, delay: navItems.length * 0.1 }}
           >
-            <Button as={Link} to="/donate" className="bg-pink-600 hover:bg-pink-700 font-display flex items-center gap-2">
-              <Heart className="h-4 w-4" />
-              Donate Now
-            </Button>
+            <Link to="/contact-us">
+              <Button className="bg-pink-600 hover:bg-pink-700 font-display flex items-center gap-2">
+                <Heart className="h-4 w-4" />
+                Get Involved
+              </Button>
+            </Link>
           </motion.div>
         </nav>
 
@@ -121,14 +123,14 @@ export default function Navbar() {
                 {item.name}
               </Link>
             ))}
-            <Button 
-              as={Link} 
-              to="/donate" 
-              className="bg-pink-600 hover:bg-pink-700 w-full font-display flex items-center justify-center gap-2"
-            >
-              <Heart className="h-4 w-4" />
-              Donate Now
-            </Button>
+            <Link to="/contact-us">
+              <Button 
+                className="bg-pink-600 hover:bg-pink-700 w-full font-display flex items-center justify-center gap-2"
+              >
+                <Heart className="h-4 w-4" />
+                Get Involved
+              </Button>
+            </Link>
           </div>
         </motion.div>
       )}

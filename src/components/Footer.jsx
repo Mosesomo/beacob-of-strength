@@ -131,13 +131,6 @@ export default function Footer() {
             &copy; {new Date().getFullYear()} Beacon of Strength Foundation. All rights reserved. | Designed by CarlteQ
           </p>
         </div>
-
-        <div className="mt-8 text-center text-gray-500 text-sm flex items-center justify-center font-body">
-          <span>Made with</span>
-          <strong className="mx-1">CarletQ</strong>
-          <Heart size={14} className="mx-1 text-pink-600" />
-          <span>for a better world</span>
-        </div>
       </div>
     </footer>
   );

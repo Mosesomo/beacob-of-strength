@@ -2,6 +2,7 @@ import { motion } from "framer-motion"
 import { Button } from "../components/ui/Button"
 import { Heart, ArrowRight, ChevronDown } from "lucide-react"
 import { useState, useEffect } from "react"
+import { Link } from "react-router-dom"
 
 export default function HeroSection() {
   const [isMobile, setIsMobile] = useState(false)
@@ -27,8 +28,8 @@ export default function HeroSection() {
       {/* Background Image with responsive handling */}
       <div className="absolute inset-0 z-0">
         <img 
-          src="https://i.pinimg.com/736x/85/ac/88/85ac886c4db8c4c86fa59abacf9b789d.jpg" 
-          alt="Diverse women background" 
+          src="https://images.pexels.com/photos/7805056/pexels-photo-7805056.jpeg?auto=compress&cs=tinysrgb&w=600" 
+          alt="African women empowerment background" 
           className="object-cover w-full h-full" 
         />
         <div className="absolute inset-0 bg-gradient-to-r from-purple-900/80 via-pink-800/70 to-orange-700/60 mix-blend-multiply" />
@@ -61,6 +62,7 @@ export default function HeroSection() {
               transition={{ duration: 0.8, delay: 0.6 }}
               className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start"
             >
+              <Link to="/contact-us">
               <Button
                 size={isMobile ? "default" : "lg"}
                 className="bg-pink-600 hover:bg-pink-700 text-white font-display flex items-center gap-2 justify-center w-full sm:w-auto"
@@ -68,6 +70,7 @@ export default function HeroSection() {
                 <Heart className="h-4 w-4" />
                 Get Involved
               </Button>
+              </Link>
               <Button
                 size={isMobile ? "default" : "lg"}
                 variant="outline"

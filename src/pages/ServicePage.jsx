@@ -355,7 +355,7 @@ export default function ServicesPage() {
                   className="flex justify-center"
                 >
                   <img
-                    src="https://i.pinimg.com/736x/8a/15/11/8a1511ff8aef85298398176dcc412bfe.jpg"
+                    src="https://images.pexels.com/photos/30865266/pexels-photo-30865266/free-photo-of-women-running-in-colorful-dresses-on-track.jpeg?auto=compress&cs=tinysrgb&w=600"
                     alt="Mental Health Illustration"
                     className="w-full h-120 object-cover rounded-lg shadow-lg"
                   />
